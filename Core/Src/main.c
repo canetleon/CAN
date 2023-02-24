@@ -57,7 +57,7 @@ static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 void CAN_Config(void);
-
+uint8_t CAN_Transmit(uint32_t, uint32_t, uint8_t *);
 
 
 /* USER CODE END PFP */
@@ -138,12 +138,30 @@ int main(void)
 	  {
 		  HAL_UART_Transmit(&huart2, UART_rxBLock, sizeof(Test), 10);
 		  UART_rxBuffer[0] = 0;
-		  UART_rxBLock[] = [0; 0; 0; 0; 0; 0; 0; 0];
+		  for(int j=0; j<= 15; j++)
+		  {
+			  UART_rxBLock[j] = 0;
+		  }
 		  i = 0;
 	  }
 
+	  if(HAL_CAN_GetRxFifoFillLevel(&hcan, CAN_RX_FIFO0) > 0)
+	  {
+		  HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &RxHeader, RxData);
 
-  }
+		  if (RxHeader.IDE == CAN_ID_STD && RxHeader.DLC == 1 && RxData[0] == 4)
+		  {
+			  uint8_t CanMsg[] = "RECEPTION";
+			  HAL_UART_Transmit(&huart2,CanMsg,sizeof(CanMsg),10);
+		  }
+	  }
+
+	  uint32_t addr = 0x00;
+	  uint32_t data_size = 8;
+	  uint8_t tab_data[] = {0, 1, 2, 3, 4, 5, 6, 7};
+
+	  CAN_Transmit(addr, data_size, &tab_data);
+
   /* USER CODE END 3 */
 }
 
@@ -291,7 +309,6 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
@@ -352,6 +369,24 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     i++;
 }
 
+
+uint8_t CAN_Transmit(uint32_t addr, uint32_t data_size, uint8_t * tab_data)
+{
+    if(data_size > 8 || sizeof(tab_data) / sizeof(tab_data[0]) <= data_size)
+	return 0;
+
+    TxHeader.StdId = addr;
+    TxHeader.DLC = data_size;
+
+    for(int i = 0; i < data_size; i++)
+    {
+	TxData[i] = tab_data[i];
+    }
+
+    HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox);
+
+    return 1;
+}
 
 /* USER CODE END 4 */
 
